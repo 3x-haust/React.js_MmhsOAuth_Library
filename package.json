@@ -1,0 +1,39 @@
+{
+  "name": "mirim-oauth-react",
+  "version": "1.0.0",
+  "description": "React library for Mirim OAuth authentication",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "prepare": "yarn build",
+    "test": "jest",
+    "release": "np"
+  },
+  "keywords": [
+    "react",
+    "oauth",
+    "mirim",
+    "authentication"
+  ],
+  "author": "3xhaust",
+  "license": "MIT",
+  "peerDependencies": {
+    "react": ">=16.8.0"
+  },
+  "dependencies": {
+    "crypto-js": "^4.1.1"
+  },
+  "devDependencies": {
+    "@types/crypto-js": "^4.1.1",
+    "@types/react": "^18.0.0",
+    "typescript": "^5.0.0",
+    "jest": "^29.0.0",
+    "@types/jest": "^29.0.0"
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ]
+}
