@@ -31,6 +31,7 @@ export class MirimOAuth {
   private _currentUser: MirimUser | null = null;
   private _tokens: AuthTokens | null = null;
   private _isLoading: boolean = false;
+  private _lastOAuthState: string | null = null;
   private listeners: Array<() => void> = [];
 
   constructor(props: MirimOAuthProps) {
@@ -203,10 +204,9 @@ export class MirimOAuth {
       const response = await fetch(`${this.oauthServerUrl}${endpoint}`, requestInit);
 
       if (!response.ok) {
+        const errorText = await response.text();
         throw new MirimOAuthException(
-          'Request failed',
-          response.status,
-          await response.text()
+          `Request failed with status ${response.status}: ${errorText}`
         );
       }
 
@@ -227,7 +227,9 @@ export class MirimOAuth {
       try {
         const storedTokens = authTokensFromJson(JSON.parse(storedTokenJson));
         if (isTokenExpired(storedTokens)) {
-          return await this.performTokenRefresh(storedTokens.refreshToken);
+          const refreshedTokens = await this.performTokenRefresh(storedTokens.refreshToken);
+          this._tokens = refreshedTokens;
+          return refreshedTokens;
         }
         this._tokens = storedTokens;
         return storedTokens;
@@ -254,21 +256,20 @@ export class MirimOAuth {
 
   private async authenticate(): Promise<AuthTokens> {
     try {
-      // Generate PKCE parameters
       const codeVerifier = this.generateCodeVerifier();
       const codeChallenge = await this.generateCodeChallenge(codeVerifier);
+      const state = this.generateCodeVerifier();
+      this._lastOAuthState = state;
 
       const authUrl = new URL(`${this.oauthServerUrl}/api/v1/oauth/authorize`);
       authUrl.searchParams.set('client_id', this.clientId);
       authUrl.searchParams.set('redirect_uri', this.redirectUri);
       authUrl.searchParams.set('response_type', 'code');
       authUrl.searchParams.set('scope', this.scopes.join(','));
-      authUrl.searchParams.set('state', 'code');
+      authUrl.searchParams.set('state', state);
       authUrl.searchParams.set('code_challenge', codeChallenge);
       authUrl.searchParams.set('code_challenge_method', 'S256');
 
-      // For web applications, we need to handle the OAuth flow differently
-      // This example assumes popup-based authentication
       const popup = window.open(
         authUrl.toString(),
         'oauth',
@@ -287,10 +288,11 @@ export class MirimOAuth {
             popup.close();
             window.removeEventListener('message', messageListener);
 
-            const { code, state, error } = event.data;
+            const { code, state: receivedState, error, error_description } = event.data;
 
             if (error) {
-              reject(new MirimOAuthException(`Authentication failed: ${error}`));
+              const errorMessage = error_description ? `${error}, ${error_description}` : error;
+              reject(new MirimOAuthException(`Authentication failed: ${errorMessage}`));
               return;
             }
 
@@ -299,7 +301,12 @@ export class MirimOAuth {
               return;
             }
 
-            const tokens = await this.exchangeCodeForTokens(code, state, codeVerifier);
+            if (receivedState !== this._lastOAuthState) {
+              reject(new MirimOAuthException('Invalid state parameter'));
+              return;
+            }
+
+            const tokens = await this.exchangeCodeForTokens(code, receivedState, codeVerifier);
             resolve(tokens);
           } catch (err) {
             reject(err);
@@ -308,7 +315,6 @@ export class MirimOAuth {
 
         window.addEventListener('message', messageListener);
 
-        // Check if popup was closed manually
         const checkClosed = setInterval(() => {
           if (popup.closed) {
             clearInterval(checkClosed);
@@ -399,9 +405,9 @@ export class MirimOAuth {
 
       const tokenData = data.data;
       const tokens: AuthTokens = {
-        accessToken: tokenData.accessToken,
-        refreshToken: refreshToken,
-        expiresIn: tokenData.expiresIn || 3600,
+        accessToken: tokenData.access_token,
+        refreshToken: tokenData.refresh_token || refreshToken,
+        expiresIn: tokenData.expires_in || 3600,
         issuedAt: new Date(),
       };
 

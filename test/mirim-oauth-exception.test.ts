@@ -34,13 +34,13 @@ describe('MirimOAuthException', () => {
       const message = 'Formatted error';
       const errorCode = 403;
       const exception = new MirimOAuthException(message, errorCode);
-      expect(exception.toString()).toBe(`MirimOAuthException: ${message} (Code: ${errorCode})`);
+      expect(exception.toString()).toBe(`MirimOAuthException: ${message}`);
     });
 
     it('should return a formatted string with message when code is undefined', () => {
       const message = 'Formatted error no code';
       const exception = new MirimOAuthException(message);
-      expect(exception.toString()).toBe(`MirimOAuthException: ${message} (Code: undefined)`);
+      expect(exception.toString()).toBe(`MirimOAuthException: ${message}`);
     });
   });
 });

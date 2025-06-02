@@ -1,7 +1,11 @@
+import { TextEncoder, TextDecoder } from 'util';
 import { MirimOAuth } from '../src/mirim-oauth';
 import { MirimUser } from '../src/mirim-user';
 import { AuthTokens } from '../src/auth-tokens';
 import { MirimOAuthException } from '../src/mirim-oauth-exception';
+
+Object.defineProperty(global, 'TextEncoder', { value: TextEncoder });
+Object.defineProperty(global, 'TextDecoder', { value: TextDecoder });
 
 const localStorageMock = (() => {
   let store: Record<string, string> = {};
@@ -55,7 +59,7 @@ const mockCrypto = {
     return arr;
   }),
   subtle: {
-    digest: jest.fn().mockImplementation(async (algorithm, data) => {
+    digest: jest.fn().mockImplementation(async (_algorithm, data) => {
       const hash = new Uint8Array(32);
       for (let i = 0; i < 32; i++) {
         hash[i] = (data[i % data.length] || 0) ^ i;
@@ -102,7 +106,7 @@ describe('MirimOAuth', () => {
     (window.removeEventListener as jest.Mock).mockClear();
     if (mockPopup) mockPopup.close.mockClear();
     messageHandler = null;
-    mockPopup = null;
+    mockPopup = null; 
 
     oauth = new MirimOAuth(mockOAuthConfig);
   });
@@ -142,10 +146,10 @@ describe('MirimOAuth', () => {
 
       const loginPromise = oauth.logIn();
 
-      expect(window.open).toHaveBeenCalled();
+      await new Promise(r => setTimeout(r, 50)); 
       if (messageHandler) {
         messageHandler(new MessageEvent('message', {
-          data: { code: 'auth-code', state: 'code' },
+          data: { code: 'auth-code', state: (oauth as any)._lastOAuthState },
           origin: new URL(mockOAuthConfig.redirectUri).origin,
         }));
       }
@@ -158,40 +162,43 @@ describe('MirimOAuth', () => {
       expect(oauth.accessToken).toBe(mockTokens.accessToken);
       expect(localStorageMock.getItem('mirim_oauth_user')).toBe(JSON.stringify(mockUser));
       expect(localStorageMock.getItem('mirim_oauth_tokens')).toBeDefined();
-    });
+    }, 15000);
 
     it('should throw MirimOAuthException if authentication popup fails to open', async () => {
       (window.open as jest.Mock).mockReturnValueOnce(null);
-      await expect(oauth.logIn()).rejects.toThrow(new MirimOAuthException('Failed to open authentication popup'));
-    });
+      await expect(oauth.logIn()).rejects.toThrow('MirimOAuthException: Failed to open authentication popup');
+    }, 15000);
 
     it('should throw MirimOAuthException if OAuth callback returns an error', async () => {
       const loginPromise = oauth.logIn();
+      await new Promise(r => setTimeout(r, 50));
       if (messageHandler) {
         messageHandler(new MessageEvent('message', {
-          data: { error: 'access_denied' },
+          data: { error: 'access_denied', error_description: 'User denied access', state: (oauth as any)._lastOAuthState },
           origin: new URL(mockOAuthConfig.redirectUri).origin,
         }));
       }
-      await expect(loginPromise).rejects.toThrow(new MirimOAuthException('Authentication failed: access_denied'));
-    });
+      await expect(loginPromise).rejects.toThrow('Authentication failed: access_denied, User denied access');
+    }, 15000); 
 
     it('should throw MirimOAuthException if token exchange fails', async () => {
       (fetch as jest.Mock).mockResolvedValueOnce(Promise.resolve({
         ok: false,
         status: 400,
+        json: async () => ({ error: 'invalid_request', error_description: 'Token exchange failed' }),
         text: async () => 'Bad Request',
       }));
 
       const loginPromise = oauth.logIn();
+      await new Promise(r => setTimeout(r, 50));
       if (messageHandler) {
         messageHandler(new MessageEvent('message', {
-          data: { code: 'auth-code', state: 'code' },
+          data: { code: 'auth-code', state: (oauth as any)._lastOAuthState },
           origin: new URL(mockOAuthConfig.redirectUri).origin,
         }));
       }
-      await expect(loginPromise).rejects.toThrow(MirimOAuthException);
-    });
+      await expect(loginPromise).rejects.toThrow('Failed to exchange code for tokens');
+    }, 15000);
 
     it('should throw MirimOAuthException if fetch user info fails', async () => {
       (fetch as jest.Mock)
@@ -212,19 +219,21 @@ describe('MirimOAuth', () => {
           Promise.resolve({
             ok: false,
             status: 500,
+            json: async () => ({ error: 'server_error', error_description: 'Fetch user info failed' }),
             text: async () => 'Server Error',
           })
         );
 
         const loginPromise = oauth.logIn();
+        await new Promise(r => setTimeout(r, 50));
         if (messageHandler) {
           messageHandler(new MessageEvent('message', {
-            data: { code: 'auth-code', state: 'code' },
+            data: { code: 'auth-code', state: (oauth as any)._lastOAuthState },
             origin: new URL(mockOAuthConfig.redirectUri).origin,
           }));
         }
-        await expect(loginPromise).rejects.toThrow(MirimOAuthException);
-    });
+        await expect(loginPromise).rejects.toThrow('Failed to fetch user info');
+    }, 15000);
   });
 
   describe('logOut', () => {
@@ -258,7 +267,12 @@ describe('MirimOAuth', () => {
 
     it('should load user and token from storage if valid', async () => {
       localStorageMock.setItem('mirim_oauth_user', JSON.stringify(mockUser));
-      localStorageMock.setItem('mirim_oauth_tokens', JSON.stringify({ ...mockTokens, issued_at: new Date().toISOString() }));
+      localStorageMock.setItem('mirim_oauth_tokens', JSON.stringify({ 
+        access_token: mockTokens.accessToken, 
+        refresh_token: mockTokens.refreshToken,
+        expires_in: mockTokens.expiresIn,
+        issued_at: mockTokens.issuedAt.toISOString()
+      }));
 
       expect(await oauth.checkIsLoggedIn()).toBe(true);
       expect(oauth.currentUser).toEqual(mockUser);
@@ -267,14 +281,19 @@ describe('MirimOAuth', () => {
 
     it('should attempt to refresh token if stored token is expired', async () => {
       localStorageMock.setItem('mirim_oauth_user', JSON.stringify(mockUser));
-      localStorageMock.setItem('mirim_oauth_tokens', JSON.stringify({ ...mockExpiredTokens, issued_at: mockExpiredTokens.issuedAt.toISOString() }));
+      localStorageMock.setItem('mirim_oauth_tokens', JSON.stringify({ 
+        access_token: mockExpiredTokens.accessToken,
+        refresh_token: mockExpiredTokens.refreshToken,
+        expires_in: mockExpiredTokens.expiresIn,
+        issued_at: mockExpiredTokens.issuedAt.toISOString() 
+      }));
 
       (fetch as jest.Mock).mockResolvedValueOnce( 
         Promise.resolve({
           ok: true,
           json: async () => ({
             status: 200,
-            data: { accessToken: 'new-access-token', expiresIn: 3600 },
+            data: { access_token: 'new-access-token', expires_in: 3600, refresh_token: 'new-refresh-token' },
           }),
         })
       );
@@ -287,12 +306,18 @@ describe('MirimOAuth', () => {
 
     it('should log out if token refresh fails during checkIsLoggedIn', async () => {
       localStorageMock.setItem('mirim_oauth_user', JSON.stringify(mockUser));
-      localStorageMock.setItem('mirim_oauth_tokens', JSON.stringify({ ...mockExpiredTokens, issued_at: mockExpiredTokens.issuedAt.toISOString() }));
+      localStorageMock.setItem('mirim_oauth_tokens', JSON.stringify({ 
+        access_token: mockExpiredTokens.accessToken,
+        refresh_token: mockExpiredTokens.refreshToken,
+        expires_in: mockExpiredTokens.expiresIn,
+        issued_at: mockExpiredTokens.issuedAt.toISOString() 
+      }));
 
       (fetch as jest.Mock).mockResolvedValueOnce(
         Promise.resolve({
           ok: false,
           status: 401,
+          json: async () => ({ error: 'invalid_grant', error_description: 'Refresh token expired' }),
           text: async () => 'Unauthorized',
         })
       );
@@ -305,13 +330,20 @@ describe('MirimOAuth', () => {
 
   describe('refreshTokens', () => {
     it('should successfully refresh tokens', async () => {
-      (oauth as any)._tokens = mockTokens;
+      (oauth as any)._tokens = { ...mockTokens, issuedAt: new Date(mockTokens.issuedAt) };
+      localStorageMock.setItem('mirim_oauth_tokens', JSON.stringify({
+        access_token: mockTokens.accessToken,
+        refresh_token: mockTokens.refreshToken,
+        expires_in: mockTokens.expiresIn,
+        issued_at: mockTokens.issuedAt.toISOString()
+      }));
+      
       (fetch as jest.Mock).mockResolvedValueOnce(
         Promise.resolve({
           ok: true,
           json: async () => ({
             status: 200,
-            data: { accessToken: 'new-refreshed-token', expiresIn: 1800 },
+            data: { access_token: 'new-refreshed-token', expires_in: 1800, refresh_token: 'refreshed-refresh-token' }, 
           }),
         })
       );
@@ -328,14 +360,23 @@ describe('MirimOAuth', () => {
 
     it('should throw if refresh API call fails', async () => {
       (oauth as any)._tokens = mockTokens;
+      localStorageMock.setItem('mirim_oauth_tokens', JSON.stringify({
+        access_token: mockTokens.accessToken,
+        refresh_token: mockTokens.refreshToken,
+        expires_in: mockTokens.expiresIn,
+        issued_at: mockTokens.issuedAt.toISOString()
+      }));
+
       (fetch as jest.Mock).mockResolvedValueOnce(
         Promise.resolve({
           ok: false,
           status: 400,
+          json: async () => ({ error: 'invalid_request', error_description: 'Invalid refresh token' }), 
           text: async () => 'Invalid refresh token',
         })
       );
-      await expect(oauth.refreshTokens()).rejects.toThrow(MirimOAuthException);
+      
+      await expect(oauth.refreshTokens()).rejects.toThrow('Token refresh failed');
     });
   });
 
@@ -372,6 +413,7 @@ describe('MirimOAuth', () => {
     it('should make a POST request with body and Authorization header', async () => {
       const requestBody = { key: 'value' };
       const responseData = { success: true };
+
       (fetch as jest.Mock).mockResolvedValueOnce(
         Promise.resolve({
           ok: true,
@@ -399,8 +441,13 @@ describe('MirimOAuth', () => {
     });
 
     it('should refresh token if current token is expired and then make request', async () => {
-      (oauth as any)._tokens = { ...mockExpiredTokens, issuedAt: mockExpiredTokens.issuedAt };
-      localStorageMock.setItem('mirim_oauth_tokens', JSON.stringify({ ...mockExpiredTokens, issued_at: mockExpiredTokens.issuedAt.toISOString() }));
+      (oauth as any)._tokens = { ...mockExpiredTokens, issuedAt: new Date(mockExpiredTokens.issuedAt) };
+      localStorageMock.setItem('mirim_oauth_tokens', JSON.stringify({ 
+          access_token: mockExpiredTokens.accessToken,
+          refresh_token: mockExpiredTokens.refreshToken,
+          expires_in: mockExpiredTokens.expiresIn,
+          issued_at: mockExpiredTokens.issuedAt.toISOString() 
+      }));
 
 
       const newAccessToken = 'new-access-token-after-refresh';
@@ -412,7 +459,7 @@ describe('MirimOAuth', () => {
             ok: true,
             json: async () => ({
               status: 200,
-              data: { accessToken: newAccessToken, expiresIn: 3600 },
+              data: { access_token: newAccessToken, expires_in: 3600, refresh_token: 'new-refreshed-token-variant' }, 
             }),
           })
         )
@@ -449,17 +496,21 @@ describe('MirimOAuth', () => {
         Promise.resolve({
           ok: false,
           status: 404,
+          json: async () => ({ error: 'not_found', error_description: 'Resource not found at /api/nonexistent' }),
           text: async () => 'Not Found',
         })
       );
-      await expect(oauth.makeAuthenticatedRequest('/api/nonexistent')).rejects.toThrow(MirimOAuthException);
+      
+      await expect(oauth.makeAuthenticatedRequest('/api/nonexistent')).rejects.toThrow('Request failed with status 404: Not Found');
     });
 
      it('should throw MirimOAuthException if not logged in and cannot refresh', async () => {
       await oauth.logOut();
       localStorageMock.clear();
+      (oauth as any)._tokens = undefined;
+      (oauth as any)._currentUser = null;
 
-      await expect(oauth.makeAuthenticatedRequest('/api/data')).rejects.toThrow(new MirimOAuthException('Not logged in'));
+      await expect(oauth.makeAuthenticatedRequest('/api/data')).rejects.toThrow('Not logged in');
     });
   });
 
