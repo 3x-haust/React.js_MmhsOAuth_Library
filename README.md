@@ -3,9 +3,9 @@
 ## 설치
 
 ```bash
-npm install mirim_oauth_react
+npm install mirim-oauth-react
 # 또는
-yarn add mirim_oauth_react
+yarn add mirim-oauth-react
 ```
 
 ## 사용법
@@ -16,7 +16,7 @@ yarn add mirim_oauth_react
 
 ```tsx
 import React from 'react';
-import { MirimOAuthProvider } from 'mirim_oauth_react';
+import { MirimOAuthProvider } from 'mirim-oauth-react';
 import App from './App';
 
 const Root: React.FC = () => {
@@ -42,7 +42,7 @@ export default Root;
 
 ```tsx
 import React from 'react';
-import { useMirimOAuth } from 'mirim_oauth_react';
+import { useMirimOAuth } from 'mirim-oauth-react';
 
 const LoginComponent: React.FC = () => {
   const { 
@@ -107,7 +107,7 @@ export default LoginComponent;
 Hook을 사용하지 않고 클래스를 직접 사용할 수도 있습니다:
 
 ```tsx
-import { MirimOAuth } from 'mirim_oauth_react';
+import { MirimOAuth } from 'mirim-oauth-react';
 
 const oauth = new MirimOAuth({
   clientId: 'your-client-id',
