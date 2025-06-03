@@ -3,9 +3,7 @@ import { useState, useEffect, useCallback, createContext, useContext } from 'rea
 import { MirimOAuth } from './mirim-oauth';
 import { MirimUser } from './mirim-user';
 import { AuthTokens } from './auth-tokens';
-import { MirimOAuthException } from './mirim-oauth-exception';
 
-// Export all types and classes
 export * from './mirim-oauth';
 export * from './mirim-user';
 export * from './auth-tokens';

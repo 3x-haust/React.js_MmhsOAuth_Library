@@ -1,5 +1,5 @@
 import React from 'react';
-import { MirimOAuthProvider, useMirimOAuth } from '../.';
+import { MirimOAuthProvider, useMirimOAuth } from '../src/index';
 
 // 예제 컴포넌트
 const LoginComponent: React.FC = () => {
