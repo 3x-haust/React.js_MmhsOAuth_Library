@@ -1,4 +1,4 @@
-import React from 'react';
+import * as React from 'react';
 import { MirimOAuthProvider, useMirimOAuth } from '../src/index';
 
 const LoginComponent: React.FC = () => {
@@ -85,7 +85,7 @@ const App: React.FC = () => {
       clientId="your-client-id"
       clientSecret="your-client-secret"
       redirectUri="http://localhost:3000/callback"
-      scopes={['user:read', 'user:profile']}
+      scopes={'nickname'}
       oauthServerUrl="https://api-auth.mmhs.app" // 기본값이므로 생략 가능
     >
       <div style={{ padding: '20px' }}>

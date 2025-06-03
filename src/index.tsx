@@ -29,7 +29,7 @@ interface MirimOAuthProviderProps {
   clientSecret: string;
   redirectUri: string;
   oauthServerUrl?: string;
-  scopes: string[];
+  scopes: string;
   storage?: Storage;
 }
 

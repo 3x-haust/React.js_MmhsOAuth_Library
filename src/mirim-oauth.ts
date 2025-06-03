@@ -10,7 +10,7 @@ interface MirimOAuthProps {
   clientSecret: string;
   redirectUri: string;
   oauthServerUrl?: string;
-  scopes: string[];
+  scopes: string;
   storage?: Storage;
 }
 
@@ -25,7 +25,7 @@ export class MirimOAuth {
   private clientSecret: string;
   private redirectUri: string;
   private oauthServerUrl: string;
-  private scopes: string[];
+  private scopes: string;
   private storage: Storage;
 
   private _currentUser: MirimUser | null = null;
@@ -265,7 +265,7 @@ export class MirimOAuth {
       authUrl.searchParams.set('client_id', this.clientId);
       authUrl.searchParams.set('redirect_uri', this.redirectUri);
       authUrl.searchParams.set('response_type', 'code');
-      authUrl.searchParams.set('scope', this.scopes.join(','));
+      authUrl.searchParams.set('scope', this.scopes);
       authUrl.searchParams.set('state', state);
       authUrl.searchParams.set('code_challenge', codeChallenge);
       authUrl.searchParams.set('code_challenge_method', 'S256');
@@ -340,7 +340,7 @@ export class MirimOAuth {
           clientId: this.clientId,
           clientSecret: this.clientSecret,
           redirectUri: this.redirectUri,
-          scopes: this.scopes.join(','),
+          scopes: this.scopes,
           codeVerifier,
         }),
       });
