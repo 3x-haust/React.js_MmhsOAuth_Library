@@ -75,7 +75,7 @@ const mockOAuthConfig = {
   clientId: 'test-client-id',
   clientSecret: 'test-client-secret',
   redirectUri: 'http://localhost:3000/callback',
-  scopes: ['openid', 'profile', 'email'],
+  scopes: 'user',
   storage: localStorageMock,
 };
 
