@@ -64,9 +64,7 @@ export const MirimOAuthProvider: React.FC<MirimOAuthProviderProps> = ({
   useEffect(() => {
     const unsubscribe = oauth.subscribe(updateState);
     
-    // Check if already logged in on mount
     oauth.checkIsLoggedIn().catch(() => {
-      // Ignore errors on initial check
     });
 
     return unsubscribe;
