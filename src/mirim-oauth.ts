@@ -349,17 +349,15 @@ export class MirimOAuth {
         };
 
         const messageListener = async (event: MessageEvent) => {
-          if (event.origin !== new URL(this.redirectUri).origin) {
-            return;
-          }
           if (isResolved) return;
-
+          
           try {
-            const data = event.data;
-            
-            if (!data) {
+            if (event.origin !== new URL(this.redirectUri).origin) {
               return;
             }
+
+            const data = event.data;
+            if (!data) return;
 
             let parsedData = data;
             if (typeof data === 'string') {
@@ -383,37 +381,20 @@ export class MirimOAuth {
               if (parsedData.url) {
                 await processCallback(parsedData.url);
               } else {
-                const { code, state: receivedState, error, error_description } = parsedData;
-
-                if (error) {
-                  const errorMessage = error_description ? `${error}: ${error_description}` : error;
-                  reject(new MirimOAuthException(`Authentication failed: ${errorMessage}`));
-                  return;
-                }
-
-                if (!code) {
-                  reject(new MirimOAuthException('Authorization code not received'));
-                  return;
-                }
-
-                if (receivedState !== this._lastOAuthState) {
-                  reject(new MirimOAuthException('Invalid state parameter'));
-                  return;
-                }
-
-                try {
-                  const tokens = await this.exchangeCodeForTokens(code, receivedState);
-                  resolve(tokens);
-                } catch (tokenError) {
-                  reject(tokenError);
-                }
+                const url = new URL(this.redirectUri);
+                if (parsedData.code) url.searchParams.set('code', parsedData.code);
+                if (parsedData.state) url.searchParams.set('state', parsedData.state);
+                if (parsedData.error) url.searchParams.set('error', parsedData.error);
+                if (parsedData.error_description) url.searchParams.set('error_description', parsedData.error_description);
+                
+                await processCallback(url.toString());
               }
             }
           } catch (err) {
             if (!isResolved) {
               isResolved = true;
               cleanup();
-              reject(err);
+              reject(new MirimOAuthException(`Message processing failed: ${err}`));
             }
           }
         };
@@ -431,7 +412,7 @@ export class MirimOAuth {
 
         urlCheckInterval = setInterval(() => {
           try {
-            if (popup.closed) return;
+            if (popup.closed || isResolved) return;
             
             let currentUrl: string;
             try {
@@ -446,7 +427,9 @@ export class MirimOAuth {
               if (!isResolved) {
                 isResolved = true;
                 cleanup();
-                processCallback(currentUrl);
+                processCallback(currentUrl).catch(err => {
+                  reject(new MirimOAuthException(`URL processing failed: ${err}`));
+                });
               }
             }
           } catch (e) {}
