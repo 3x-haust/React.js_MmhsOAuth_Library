@@ -39,15 +39,6 @@ const LoginComponent: React.FC = () => {
     }
   };
 
-  const handleApiCall = async () => {
-    try {
-      const result = await makeAuthenticatedRequest('/api/v1/some-endpoint');
-      console.log('API 호출 결과:', result);
-    } catch (error) {
-      console.error('API 호출 실패:', error);
-    }
-  };
-
   if (isLoading) {
     return <div>로딩 중...</div>;
   }
@@ -65,7 +56,6 @@ const LoginComponent: React.FC = () => {
         </div>
         <button onClick={handleLogout}>로그아웃</button>
         <button onClick={handleRefreshUser}>사용자 정보 새로고침</button>
-        <button onClick={handleApiCall}>API 호출 테스트</button>
       </div>
     );
   }
