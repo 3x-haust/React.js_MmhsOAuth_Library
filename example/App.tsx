@@ -82,11 +82,10 @@ const LoginComponent: React.FC = () => {
 const App: React.FC = () => {
   return (
     <MirimOAuthProvider
-      clientId="your-client-id"
-      clientSecret="your-client-secret"
-      redirectUri="http://localhost:3000/callback"
-      scopes={'nickname'}
-      oauthServerUrl="https://api-auth.mmhs.app" // 기본값이므로 생략 가능
+      clientId="4107e9c7-c9ce-4415-b069-88258ece2cd9"
+      clientSecret="9e9b320e-12a9-4da9-aa5d-1e72dab68872-cf5227cd-bf4a-41ca-8615-e6811e8865cc"
+      redirectUri="http://localhost:1234/callback"
+      scopes={'email,nickname,role,major,admission,generation,isGraduated'}
     >
       <div style={{ padding: '20px' }}>
         <h1>Mirim OAuth React 예제</h1>

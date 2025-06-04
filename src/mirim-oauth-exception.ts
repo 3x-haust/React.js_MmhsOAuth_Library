@@ -10,9 +10,6 @@ export class MirimOAuthException extends Error {
   }
 
   toString(): string {
-    if (this.errorCode !== undefined) {
-      return `MirimOAuthException: ${this.message} (Code: ${this.errorCode})`;
-    }
-    return `MirimOAuthException: ${this.message} (Code: undefined)`;
+    return `MirimOAuthException: ${this.message}`;
   }
 }
