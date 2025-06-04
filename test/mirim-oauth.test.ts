@@ -28,7 +28,7 @@ const localStorageMock = (() => {
 })();
 Object.defineProperty(window, 'localStorage', { value: localStorageMock });
 
-let mockPopup: { closed: boolean; close: jest.Mock } | null = null;
+let mockPopup: { closed: boolean; close: jest.Mock; focus?: jest.Mock } | null = null;
 let messageHandler: ((event: MessageEvent) => void) | null = null;
 
 global.window.open = jest.fn().mockImplementation(() => {
@@ -37,6 +37,7 @@ global.window.open = jest.fn().mockImplementation(() => {
     close: jest.fn(() => {
       if (mockPopup) mockPopup.closed = true;
     }),
+    focus: jest.fn(),
   };
   return mockPopup;
 });
@@ -166,7 +167,7 @@ describe('MirimOAuth', () => {
 
     it('should throw MirimOAuthException if authentication popup fails to open', async () => {
       (window.open as jest.Mock).mockReturnValueOnce(null);
-      await expect(oauth.logIn()).rejects.toThrow('MirimOAuthException: Failed to open authentication popup');
+      await expect(oauth.logIn()).rejects.toThrow('Failed to open authentication popup');
     }, 15000);
 
     it('should throw MirimOAuthException if OAuth callback returns an error', async () => {
@@ -178,7 +179,7 @@ describe('MirimOAuth', () => {
           origin: new URL(mockOAuthConfig.redirectUri).origin,
         }));
       }
-      await expect(loginPromise).rejects.toThrow('Authentication failed: access_denied, User denied access');
+      await expect(loginPromise).rejects.toThrow('Authentication failed: access_denied: User denied access');
     }, 15000); 
 
     it('should throw MirimOAuthException if token exchange fails', async () => {
@@ -301,7 +302,7 @@ describe('MirimOAuth', () => {
       expect(await oauth.checkIsLoggedIn()).toBe(true);
       expect(oauth.accessToken).toBe('new-access-token');
       expect(oauth.currentUser).toEqual(mockUser);
-      expect(fetch).toHaveBeenCalledWith(expect.stringContaining('/auth/refresh'), expect.anything());
+      expect(fetch).toHaveBeenCalledWith(expect.stringContaining('/api/v1/auth/refresh'), expect.anything());
     });
 
     it('should log out if token refresh fails during checkIsLoggedIn', async () => {

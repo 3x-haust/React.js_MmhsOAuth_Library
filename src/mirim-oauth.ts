@@ -83,39 +83,14 @@ export class MirimOAuth {
     try {
       this.setLoading(true);
       
-      let attempts = 0;
-      const maxAttempts = 3;
-      let lastError: Error | null = null;
-
-      while (attempts < maxAttempts) {
-        try {
-          const tokens = await this.authenticate();
-          const user = await this.fetchUserInfo(tokens.accessToken);
-          
-          this._tokens = tokens;
-          this._currentUser = user;
-          
-          this.setLoading(false);
-          return user;
-        } catch (error) {
-          attempts++;
-          lastError = error as Error;
-          
-          if (error instanceof MirimOAuthException && 
-              (error.message.includes('cancelled') || 
-               error.message.includes('timeout') ||
-               error.message.includes('popup'))) {
-            break;
-          }
-          
-          if (attempts < maxAttempts) {
-            await new Promise(resolve => setTimeout(resolve, 1000));
-          }
-        }
-      }
+      const tokens = await this.authenticate();
+      const user = await this.fetchUserInfo(tokens.accessToken);
+      
+      this._tokens = tokens;
+      this._currentUser = user;
       
       this.setLoading(false);
-      throw lastError || new MirimOAuthException('Login failed after multiple attempts');
+      return user;
     } catch (error) {
       this.setLoading(false);
       throw error;
@@ -314,7 +289,9 @@ export class MirimOAuth {
         throw new MirimOAuthException('Failed to open authentication popup');
       }
 
-      popup.focus();
+      if (popup.focus) {
+        popup.focus();
+      }
 
       return new Promise((resolve, reject) => {
         let isResolved = false;
@@ -339,6 +316,8 @@ export class MirimOAuth {
         };
 
         const processCallback = async (url: string | URL) => {
+          if (isResolved) return;
+          
           try {
             const uri = typeof url === 'string' ? new URL(url) : url;
             const code = uri.searchParams.get('code');
@@ -388,6 +367,8 @@ export class MirimOAuth {
                 parsedData = JSON.parse(data);
               } catch {
                 if (data.includes('code=') || data.includes('error=')) {
+                  isResolved = true;
+                  cleanup();
                   await processCallback(data);
                   return;
                 }
@@ -420,8 +401,12 @@ export class MirimOAuth {
                   return;
                 }
 
-                const tokens = await this.exchangeCodeForTokens(code, receivedState);
-                resolve(tokens);
+                try {
+                  const tokens = await this.exchangeCodeForTokens(code, receivedState);
+                  resolve(tokens);
+                } catch (tokenError) {
+                  reject(tokenError);
+                }
               }
             }
           } catch (err) {
@@ -473,7 +458,7 @@ export class MirimOAuth {
             cleanup();
             reject(new MirimOAuthException('Authentication timeout'));
           }
-        }, 120000);
+        }, 10000);
       });
     } catch (error) {
       if (error instanceof MirimOAuthException) throw error;
