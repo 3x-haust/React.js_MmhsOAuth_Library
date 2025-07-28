@@ -1,6 +1,6 @@
 {
   "name": "mirim-oauth-react",
-  "version": "1.0.6",
+  "version": "1.1.0",
   "description": "React library for Mirim OAuth authentication",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
