@@ -44,6 +44,7 @@ const LoginComponent: React.FC = () => {
   }
 
   if (isLoggedIn && currentUser) {
+    console.log('현재 사용자 정보:', currentUser);
     return (
       <div>
         <h2>안녕하세요, {currentUser.nickname || currentUser.email}님!</h2>

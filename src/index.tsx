@@ -14,6 +14,7 @@ interface MirimOAuthContextType {
   currentUser: MirimUser | null;
   isLoggedIn: boolean;
   isLoading: boolean;
+  accessToken: string | undefined;
   logIn: () => Promise<MirimUser>;
   logOut: () => Promise<void>;
   refreshUserInfo: () => Promise<MirimUser>;
@@ -54,11 +55,13 @@ export const MirimOAuthProvider: React.FC<MirimOAuthProviderProps> = ({
   const [currentUser, setCurrentUser] = useState<MirimUser | null>(oauth.currentUser);
   const [isLoggedIn, setIsLoggedIn] = useState(oauth.isLoggedIn);
   const [isLoading, setIsLoading] = useState(oauth.isLoading);
+  const [accessToken, setAccessToken] = useState<string | undefined>(oauth.accessToken);
 
   const updateState = useCallback(() => {
     setCurrentUser(oauth.currentUser);
     setIsLoggedIn(oauth.isLoggedIn);
     setIsLoading(oauth.isLoading);
+    setAccessToken(oauth.accessToken);
   }, [oauth]);
 
   useEffect(() => {
@@ -95,6 +98,7 @@ export const MirimOAuthProvider: React.FC<MirimOAuthProviderProps> = ({
     currentUser,
     isLoggedIn,
     isLoading,
+    accessToken,
     logIn,
     logOut,
     refreshUserInfo,
