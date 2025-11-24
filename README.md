@@ -188,16 +188,6 @@ interface AuthTokens {
 }
 ```
 
-## 주요 기능
-
-- ✅ **PKCE 지원**: 보안이 강화된 OAuth 2.0 플로우
-- ✅ **자동 토큰 갱신**: 만료된 토큰 자동 갱신
-- ✅ **React Hook**: 편리한 React Hook 인터페이스
-- ✅ **TypeScript**: 완전한 TypeScript 지원
-- ✅ **로컬 스토리지**: 토큰과 사용자 정보 자동 저장
-- ✅ **에러 처리**: 상세한 에러 정보 제공
-- ✅ **팝업 인증**: 웹 환경에서 팝업을 통한 인증
-
 ## Flutter 라이브러리와의 차이점
 
 이 React 라이브러리는 Flutter의 `mirim_oauth_flutter`와 동일한 API 구조를 가지고 있지만, 다음과 같은 차이점이 있습니다:
