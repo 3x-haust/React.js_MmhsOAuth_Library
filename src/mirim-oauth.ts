@@ -515,9 +515,9 @@ export class MirimOAuth {
 
       const tokenData = data.data;
       const tokens: AuthTokens = {
-        accessToken: tokenData.access_token,
-        refreshToken: tokenData.refresh_token,
-        expiresIn: tokenData.expires_in || 3600,
+        accessToken: tokenData.access_token ?? tokenData.accessToken,
+        refreshToken: tokenData.refresh_token ?? tokenData.refreshToken,
+        expiresIn: tokenData.expires_in ?? tokenData.expires_in_accessToken ?? 3600,
         issuedAt: new Date(),
       };
 
@@ -556,9 +556,9 @@ export class MirimOAuth {
 
       const tokenData = data.data;
       const tokens: AuthTokens = {
-        accessToken: tokenData.access_token,
-        refreshToken: tokenData.refresh_token || refreshToken,
-        expiresIn: tokenData.expires_in || 3600,
+        accessToken: tokenData.access_token ?? tokenData.accessToken,
+        refreshToken: tokenData.refresh_token ?? tokenData.refreshToken ?? refreshToken,
+        expiresIn: tokenData.expires_in ?? tokenData.expires_in_accessToken ?? 3600,
         issuedAt: new Date(),
       };
 
